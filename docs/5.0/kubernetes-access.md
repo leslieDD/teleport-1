@@ -12,6 +12,59 @@ Teleport handles SSO and provides a unified access plane for Kubernetes clusters
 * Admins can use roles to implement policies like `developers must not access production`.
 * Achieve compliance by capturing `kubectl` events and session recordings for `kubectl exec`.
 
+## SSO and Audit for Kubernetes in 5 steps with Teleport
+
+Set up single sign on, capture audit events and sessions with Teleport
+running in a Kubernetes cluster
+
+### Prerequisites
+
+* [Kubernetes](https://kubernetes.io) >= v1.14.0
+* [Helm](https://helm.sh) >= v3.2.0
+
+Verify that helm and kubernetes are installed and up to date.
+
+```bash
+$ helm version
+version.BuildInfo{Version:"v3.4.2", GitCommit:"23dd3af5e19a02d4f4baa5b2f242645a1a3af629", GitTreeState:"clean", GoVersion:"go1.14.13"}
+
+$ kubectl version
+Client Version: version.Info{Major:"1", Minor:"17+", GitVersion:"v1.17.16-rc.0", GitCommit:"737e2c461a2999fa242d39e77b9252d0eee7167e", GitTreeState:"clean", BuildDate:"2020-12-09T11:14:02Z", GoVersion:"go1.13.15", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"17+", GitVersion:"v1.17.13-gke.2001", GitCommit:"00c919adfe4adf308bcd7c02838f2a1b60482f02", GitTreeState:"clean", BuildDate:"2020-11-06T18:24:02Z", GoVersion:"go1.13.15b4", Compiler:"gc", Platform:"linux/amd64"}
+```
+
+### U2F for Kubernetes (Step 1 out of 5)
+
+Let's install teleport on your Kubernetes cluster and set up second factor
+authentication for kubectl.
+
+=== "Community"
+
+```
+$ helm repo add teleport https://charts.releases.teleport.dev
+
+# Install teleport cluster. Set clusterName to unique hostname, for example teleport.example.com
+$ helm install --set clusterName= teleport-cluster --create-namespace --namespace=teleport-cluster ./teleport-cluster/
+
+NAME: teleport-cluster
+LAST DEPLOYED: Sat Dec 12 10:59:43 2020
+NAMESPACE: teleport-cluster
+STATUS: deployed
+```
+
+```
+
+
+
+```
+### SSO for Kubernetes (step 1 out of 5)
+
+### 3/5 Configure audits and sessions backends  (step 1 out of 5)
+
+### 4/5 Configure backends
+
+### 5/5 Configure backends
+
 ## Teleport Kubernetes Service
 
 By default, the Kubernetes integration is turned off in Teleport. The configuration

@@ -1,0 +1,36 @@
+##################################################
+# Values that must always be provided by the user.
+##################################################
+
+# clusterName is a unique cluster name,
+# FQDN that does not change, for example
+# teleport.example.com
+clusterName: 
+
+##################################################
+# Values that you may need to change.
+##################################################
+
+# Version of teleport image, if different from appVersion in Chart.yaml.
+teleportVersionOverride: ""
+
+# ACME is a protocol for getting certificates
+# acmeEnabled enables acme protocol
+acmeEnabled: false
+acmeEmail: ""
+acmeURI: ""
+
+##################################################
+# Values that you shouldn't need to change.
+##################################################
+
+# Container image for the agent.
+image: quay.io/gravitational/teleport
+# Number of replicas for the agent deployment.
+replicaCount: 1
+# Name of the ClusterRole, used by the agent's service account.
+clusterRoleName: teleport-cluster
+# Name of the ClusterRoleBinding, used by the agent's service account.
+clusterRoleBindingName: teleport-cluster
+# Name of the service account used by the agent.
+serviceAccountName: teleport-cluster

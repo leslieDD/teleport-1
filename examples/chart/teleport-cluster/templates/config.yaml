@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+data:
+  teleport.yaml: |
+    teleport:
+    auth_service:
+      enabled: true
+      cluster_name: {{ required "clusterName is required in chart values" .Values.clusterName }}
+    kubernetes_service:
+      enabled: true
+    proxy_service:
+      public_addr: '{{ required "clusterName is required in chart values" .Values.clusterName }}:443'
+      enabled: true
+      acme:
+        enabled: true
+        email: {{ .Values.acmeEmail }}
+        uri: {{ .Values.acmeURI }}
+    ssh_service:
+      enabled: false
