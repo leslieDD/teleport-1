@@ -1506,9 +1506,19 @@ func (c *Client) DeleteWebSession(user string, sid string) error {
 	return trace.Wrap(err)
 }
 
-// GetWebSession returns the web session for the specified request
-func (c *Client) GetWebSessionV2(ctx context.Context, req services.GetWebSessionRequest) (services.WebSession, error) {
-	clt, err := c.grpc()
+func (c *Client) WebSessions() services.WebSessionInterface {
+	return &webSessions{c: c}
+}
+
+// GetWebSession returns the web session for the specified request.
+// Implements ReadAccessPoint
+func (c *Client) GetWebSession(ctx context.Context, req services.GetWebSessionRequest) (services.WebSession, error) {
+	return c.WebSessions().Get(ctx, req)
+}
+
+// Get returns the web session for the specified request
+func (r *webSessions) Get(ctx context.Context, req services.GetWebSessionRequest) (services.WebSession, error) {
+	clt, err := r.c.grpc()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -1521,9 +1531,9 @@ func (c *Client) GetWebSessionV2(ctx context.Context, req services.GetWebSession
 	return resp.Session, nil
 }
 
-// GetWebSessions returns the list of all web sessions
-func (c *Client) GetWebSessionsV2(ctx context.Context) ([]services.WebSession, error) {
-	clt, err := c.grpc()
+// List returns the list of all web sessions
+func (r *webSessions) List(ctx context.Context) ([]services.WebSession, error) {
+	clt, err := r.c.grpc()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -1538,14 +1548,14 @@ func (c *Client) GetWebSessionsV2(ctx context.Context) ([]services.WebSession, e
 	return out, nil
 }
 
-// UpsertWebSession not implemented: can only be called locally.
-func (c *Client) UpsertWebSessionV2(ctx context.Context, session services.WebSession) error {
+// Upsert not implemented: can only be called locally.
+func (r *webSessions) Upsert(ctx context.Context, session services.WebSession) error {
 	return trace.NotImplemented(notImplementedMessage)
 }
 
-// DeleteWebSession deletes the web session specified with the given request
-func (c *Client) DeleteWebSessionV2(ctx context.Context, req services.DeleteWebSessionRequest) error {
-	clt, err := c.grpc()
+// Delete deletes the web session specified with the request
+func (r *webSessions) Delete(ctx context.Context, req services.DeleteWebSessionRequest) error {
+	clt, err := r.c.grpc()
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -1558,9 +1568,9 @@ func (c *Client) DeleteWebSessionV2(ctx context.Context, req services.DeleteWebS
 	return nil
 }
 
-// DeleteAllWebSessions deletes the web session specified with the given request
-func (c *Client) DeleteAllWebSessionsV2(ctx context.Context) error {
-	clt, err := c.grpc()
+// DeleteAll deletes all web sessions
+func (r *webSessions) DeleteAll(ctx context.Context) error {
+	clt, err := r.c.grpc()
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -1569,6 +1579,10 @@ func (c *Client) DeleteAllWebSessionsV2(ctx context.Context) error {
 		return trail.FromGRPC(err)
 	}
 	return nil
+}
+
+type webSessions struct {
+	c *Client
 }
 
 // GetUser returns a list of usernames registered in the system
@@ -3273,9 +3287,6 @@ type WebService interface {
 	// WebUIService implements web session support for UI clients
 	WebUIService
 
-	// WebSessionInterface defines regular session features.
-	services.WebSessionInterface
-
 	// AppSession defines application session features.
 	services.AppSession
 }
@@ -3466,6 +3477,7 @@ type ClientI interface {
 	session.Service
 	services.ClusterConfiguration
 	services.Events
+	services.WebSessionsGetter
 
 	// NewKeepAliver returns a new instance of keep aliver
 	NewKeepAliver(ctx context.Context) (services.KeepAliver, error)
@@ -3509,4 +3521,8 @@ type ClientI interface {
 	// CreateAppSession creates an application web session. Application web
 	// sessions represent a browser session the client holds.
 	CreateAppSession(context.Context, services.CreateAppSessionRequest) (services.WebSession, error)
+
+	// GetWebSession queries the existing web session described with req.
+	// Implements ReadAccessPoint.
+	GetWebSession(ctx context.Context, req services.GetWebSessionRequest) (services.WebSession, error)
 }
