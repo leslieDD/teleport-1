@@ -55,5 +55,6 @@ spec:
         configMap:
           name: {{ .Release.Name }}
       - name: "data"
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}
       serviceAccountName: {{ .Values.serviceAccountName }}

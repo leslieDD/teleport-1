@@ -28,10 +28,12 @@ func hostPolicy(addrs []utils.NetAddr) (autocert.HostPolicy, error) {
 
 	return func(_ context.Context, host string) error {
 		for _, dnsName := range dnsNames {
-			if strings.HasSuffix(host, "."+dnsName) {
+			if dnsName == host || strings.HasSuffix(host, "."+dnsName) {
 				return nil
 			}
 		}
-		return trace.BadParameter("acme does not recognize domain %q, please add it in proxy public_addr section")
+		return trace.BadParameter(
+			"acme does not recognize domain %q, please add it in proxy public_addr section, supported domains are: %v (including subdomains)",
+			host, strings.Join(dnsNames, ","))
 	}, nil
 }
