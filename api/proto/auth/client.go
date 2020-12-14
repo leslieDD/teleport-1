@@ -157,6 +157,7 @@ func (c *Client) UpsertNode(s services.Server) (*services.KeepAlive, error) {
 }
 
 // NewKeepAliver returns a new instance of keep aliver
+// run k.Close to release the keepAliver and its goroutines
 func (c *Client) NewKeepAliver(ctx context.Context) (services.KeepAliver, error) {
 	cancelCtx, cancel := context.WithCancel(ctx)
 	stream, err := c.grpc.SendKeepAlives(cancelCtx)
@@ -184,6 +185,7 @@ type streamKeepAliver struct {
 	err         error
 }
 
+// KeepAlives returns the streamKeepAliver's channel of keepAlives
 func (k *streamKeepAliver) KeepAlives() chan<- services.KeepAlive {
 	return k.keepAlivesC
 }
@@ -203,12 +205,14 @@ func (k *streamKeepAliver) forwardKeepAlives() {
 	}
 }
 
+// Error returns the streamKeepAliver's error after closing
 func (k *streamKeepAliver) Error() error {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.err
 }
 
+// Done returns a channel that closes once the streamKeepAliver is Closed
 func (k *streamKeepAliver) Done() <-chan struct{} {
 	return k.ctx.Done()
 }
@@ -227,6 +231,7 @@ func (k *streamKeepAliver) closeWithError(err error) {
 	k.err = err
 }
 
+// Close the streamKeepAliver
 func (k *streamKeepAliver) Close() error {
 	k.cancel()
 	return nil
@@ -268,6 +273,7 @@ type streamWatcher struct {
 	err     error
 }
 
+// Error returns the streamWatcher's error
 func (w *streamWatcher) Error() error {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -284,6 +290,7 @@ func (w *streamWatcher) closeWithError(err error) {
 	w.err = err
 }
 
+// Events returns the streamWatcher's events channel
 func (w *streamWatcher) Events() <-chan services.Event {
 	return w.eventsC
 }
@@ -308,10 +315,12 @@ func (w *streamWatcher) receiveEvents() {
 	}
 }
 
+// Done returns a channel that closes once the streamKeepAliver is Closed
 func (w *streamWatcher) Done() <-chan struct{} {
 	return w.ctx.Done()
 }
 
+// Close the streamWatcher
 func (w *streamWatcher) Close() error {
 	w.cancel()
 	return nil
@@ -394,9 +403,6 @@ func (c *Client) GetUsers(withSecrets bool) ([]services.User, error) {
 
 // DeleteUser deletes a user by name.
 func (c *Client) DeleteUser(ctx context.Context, user string) error {
-	if user == "" {
-		return trace.BadParameter("missing username")
-	}
 	req := &DeleteUserRequest{Name: user}
 	_, err := c.grpc.DeleteUser(ctx, req)
 	return trail.FromGRPC(err)
@@ -413,7 +419,7 @@ func (c *Client) GenerateUserCerts(ctx context.Context, req UserCertsRequest) (*
 	return certs, nil
 }
 
-// createOrResumeAuditStream creates or resumes audit stream described in the request
+// createOrResumeAuditStream creates or resumes audit stream described in the request.
 func (c *Client) createOrResumeAuditStream(ctx context.Context, request AuditStreamRequest) (events.Stream, error) {
 	closeCtx, cancel := context.WithCancel(ctx)
 	stream, err := c.grpc.CreateAuditStream(closeCtx, grpc.UseCompressor(ggzip.Name))
@@ -435,7 +441,7 @@ func (c *Client) createOrResumeAuditStream(ctx context.Context, request AuditStr
 	return s, nil
 }
 
-// ResumeAuditStream resumes existing audit stream
+// ResumeAuditStream resumes existing audit stream.
 func (c *Client) ResumeAuditStream(ctx context.Context, sid session.ID, uploadID string) (events.Stream, error) {
 	return c.createOrResumeAuditStream(ctx, AuditStreamRequest{
 		Request: &AuditStreamRequest_ResumeStream{
@@ -446,7 +452,7 @@ func (c *Client) ResumeAuditStream(ctx context.Context, sid session.ID, uploadID
 	})
 }
 
-// CreateAuditStream creates new audit stream
+// CreateAuditStream creates new audit stream.
 func (c *Client) CreateAuditStream(ctx context.Context, sid session.ID) (events.Stream, error) {
 	return c.createOrResumeAuditStream(ctx, AuditStreamRequest{
 		Request: &AuditStreamRequest_CreateStream{
@@ -464,7 +470,7 @@ type auditStreamer struct {
 }
 
 // Close flushes non-uploaded flight stream data without marking
-// the stream completed and closes the stream instance
+// the stream completed and closes the stream instance.
 func (s *auditStreamer) Close(ctx context.Context) error {
 	defer s.closeWithError(nil)
 	return trail.FromGRPC(s.stream.Send(&AuditStreamRequest{
@@ -474,7 +480,7 @@ func (s *auditStreamer) Close(ctx context.Context) error {
 	}))
 }
 
-// Complete completes stream
+// Complete completes stream.
 func (s *auditStreamer) Complete(ctx context.Context) error {
 	return trail.FromGRPC(s.stream.Send(&AuditStreamRequest{
 		Request: &AuditStreamRequest_CompleteStream{
@@ -483,13 +489,13 @@ func (s *auditStreamer) Complete(ctx context.Context) error {
 	}))
 }
 
-// Status returns channel receiving updates about stream status
-// last event index that was uploaded and upload ID
+// Status returns a StreamStatus channel for the auditStreamer,
+// which can be received from to interact with new updates.
 func (s *auditStreamer) Status() <-chan events.StreamStatus {
 	return s.statusCh
 }
 
-// EmitAuditEvent emits audit event
+// EmitAuditEvent emits audit event.
 func (s *auditStreamer) EmitAuditEvent(ctx context.Context, event events.AuditEvent) error {
 	oneof, err := events.ToOneOf(event)
 	if err != nil {
@@ -505,13 +511,13 @@ func (s *auditStreamer) EmitAuditEvent(ctx context.Context, event events.AuditEv
 	return nil
 }
 
-// Done returns channel closed when streamer is closed
-// should be used to detect sending errors
+// Done returns channel closed when streamer is closed.
+// Should be used to detect sending errors.
 func (s *auditStreamer) Done() <-chan struct{} {
 	return s.closeCtx.Done()
 }
 
-// Error returns last error of the stream
+// Error returns last error of the stream.
 func (s *auditStreamer) Error() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -519,7 +525,7 @@ func (s *auditStreamer) Error() error {
 }
 
 // recv is necessary to receive errors from the
-// server, otherwise no errors will be propagated
+// server, otherwise no errors will be propagated.
 func (s *auditStreamer) recv() {
 	for {
 		status, err := s.stream.Recv()
@@ -543,7 +549,7 @@ func (s *auditStreamer) closeWithError(err error) {
 	s.err = err
 }
 
-// EmitAuditEvent sends an auditable event to the auth server
+// EmitAuditEvent sends an auditable event to the auth server.
 func (c *Client) EmitAuditEvent(ctx context.Context, event events.AuditEvent) error {
 	grpcEvent, err := events.ToOneOf(event)
 	if err != nil {
@@ -556,6 +562,7 @@ func (c *Client) EmitAuditEvent(ctx context.Context, event events.AuditEvent) er
 	return nil
 }
 
+// GetAccessRequests retrieves a list of all access requests matching the provided filter.
 func (c *Client) GetAccessRequests(ctx context.Context, filter services.AccessRequestFilter) ([]services.AccessRequest, error) {
 	rsp, err := c.grpc.GetAccessRequests(ctx, &filter)
 	if err != nil {
@@ -568,6 +575,7 @@ func (c *Client) GetAccessRequests(ctx context.Context, filter services.AccessRe
 	return reqs, nil
 }
 
+// CreateAccessRequest registers a new access request with the auth server.
 func (c *Client) CreateAccessRequest(ctx context.Context, req services.AccessRequest) error {
 	r, ok := req.(*services.AccessRequestV3)
 	if !ok {
@@ -577,8 +585,12 @@ func (c *Client) CreateAccessRequest(ctx context.Context, req services.AccessReq
 	return trail.FromGRPC(err)
 }
 
+// RotateResetPasswordTokenSecrets rotates secrets for a given tokenID.
+// It gets called every time a user fetches 2nd-factor secrets during registration attempt.
+// This ensures that an attacker that gains the ResetPasswordToken link can not view it,
+// extract the OTP key from the QR code, then allow the user to signup with
+// the same OTP token.
 func (c *Client) RotateResetPasswordTokenSecrets(ctx context.Context, tokenID string) (services.ResetPasswordTokenSecrets, error) {
-
 	secrets, err := c.grpc.RotateResetPasswordTokenSecrets(ctx, &RotateResetPasswordTokenSecretsRequest{
 		TokenID: tokenID,
 	})
@@ -588,8 +600,8 @@ func (c *Client) RotateResetPasswordTokenSecrets(ctx context.Context, tokenID st
 	return secrets, nil
 }
 
+// GetResetPasswordTokens returns all ResetPasswordTokens.
 func (c *Client) GetResetPasswordToken(ctx context.Context, tokenID string) (services.ResetPasswordToken, error) {
-
 	token, err := c.grpc.GetResetPasswordToken(ctx, &GetResetPasswordTokenRequest{
 		TokenID: tokenID,
 	})
@@ -600,9 +612,8 @@ func (c *Client) GetResetPasswordToken(ctx context.Context, tokenID string) (ser
 	return token, nil
 }
 
-// CreateResetPasswordToken creates reset password token
+// CreateResetPasswordToken creates reset password token.
 func (c *Client) CreateResetPasswordToken(ctx context.Context, req CreateResetPasswordTokenRequest) (services.ResetPasswordToken, error) {
-
 	token, err := c.grpc.CreateResetPasswordToken(ctx, &req)
 	if err != nil {
 		return nil, trail.FromGRPC(err)
@@ -611,11 +622,9 @@ func (c *Client) CreateResetPasswordToken(ctx context.Context, req CreateResetPa
 	return token, nil
 }
 
+// DeleteAccessRequest deletes an access request.
 func (c *Client) DeleteAccessRequest(ctx context.Context, reqID string) error {
-
-	_, err := c.grpc.DeleteAccessRequest(ctx, &RequestID{
-		ID: reqID,
-	})
+	_, err := c.grpc.DeleteAccessRequest(ctx, &RequestID{ID: reqID})
 	return trail.FromGRPC(err)
 }
 
@@ -637,6 +646,7 @@ func getDelegator(ctx context.Context) string {
 	return delegator
 }
 
+// SetAccessRequestState updates the state of an existing access request.
 func (c *Client) SetAccessRequestState(ctx context.Context, params services.AccessRequestUpdate) error {
 	setter := RequestStateSetter{
 		ID:          params.RequestID,
@@ -741,7 +751,6 @@ func (c *Client) GetKubeServices(ctx context.Context) ([]services.Server, error)
 
 // GetAppServers gets all application servers.
 func (c *Client) GetAppServers(ctx context.Context, namespace string, opts ...services.MarshalOption) ([]services.Server, error) {
-
 	cfg, err := services.CollectOptions(opts)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -765,7 +774,6 @@ func (c *Client) GetAppServers(ctx context.Context, namespace string, opts ...se
 
 // UpsertAppServer adds an application server.
 func (c *Client) UpsertAppServer(ctx context.Context, server services.Server) (*services.KeepAlive, error) {
-
 	s, ok := server.(*services.ServerV2)
 	if !ok {
 		return nil, trace.BadParameter("invalid type %T", server)
@@ -782,7 +790,6 @@ func (c *Client) UpsertAppServer(ctx context.Context, server services.Server) (*
 
 // DeleteAppServer removes an application server.
 func (c *Client) DeleteAppServer(ctx context.Context, namespace string, name string) error {
-
 	_, err := c.grpc.DeleteAppServer(ctx, &DeleteAppServerRequest{
 		Namespace: namespace,
 		Name:      name,
@@ -792,7 +799,6 @@ func (c *Client) DeleteAppServer(ctx context.Context, namespace string, name str
 
 // DeleteAllAppServers removes all application servers.
 func (c *Client) DeleteAllAppServers(ctx context.Context, namespace string) error {
-
 	_, err := c.grpc.DeleteAllAppServers(ctx, &DeleteAllAppServersRequest{
 		Namespace: namespace,
 	})
@@ -801,7 +807,6 @@ func (c *Client) DeleteAllAppServers(ctx context.Context, namespace string) erro
 
 // GetAppSession gets an application web session.
 func (c *Client) GetAppSession(ctx context.Context, req services.GetAppSessionRequest) (services.WebSession, error) {
-
 	resp, err := c.grpc.GetAppSession(ctx, &GetAppSessionRequest{
 		SessionID: req.SessionID,
 	})
@@ -814,7 +819,6 @@ func (c *Client) GetAppSession(ctx context.Context, req services.GetAppSessionRe
 
 // GetAppSessions gets all application web sessions.
 func (c *Client) GetAppSessions(ctx context.Context) ([]services.WebSession, error) {
-
 	resp, err := c.grpc.GetAppSessions(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, trail.FromGRPC(err)
@@ -830,7 +834,6 @@ func (c *Client) GetAppSessions(ctx context.Context) ([]services.WebSession, err
 // CreateAppSession creates an application web session. Application web
 // sessions represent a browser session the client holds.
 func (c *Client) CreateAppSession(ctx context.Context, req services.CreateAppSessionRequest) (services.WebSession, error) {
-
 	resp, err := c.grpc.CreateAppSession(ctx, &CreateAppSessionRequest{
 		Username:      req.Username,
 		ParentSession: req.ParentSession,
@@ -855,14 +858,12 @@ func (c *Client) DeleteAppSession(ctx context.Context, req services.DeleteAppSes
 
 // DeleteAllAppSessions removes all application web sessions.
 func (c *Client) DeleteAllAppSessions(ctx context.Context) error {
-
 	_, err := c.grpc.DeleteAllAppSessions(ctx, &empty.Empty{})
 	return trail.FromGRPC(err)
 }
 
 // GenerateAppToken creates a JWT token with application access.
 func (c *Client) GenerateAppToken(ctx context.Context, req jwt.GenerateAppTokenRequest) (string, error) {
-
 	resp, err := c.grpc.GenerateAppToken(ctx, &GenerateAppTokenRequest{
 		Username: req.Username,
 		Roles:    req.Roles,

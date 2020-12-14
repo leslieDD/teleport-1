@@ -92,6 +92,6 @@ func eventTypeFromGRPC(in Operation) (backend.OpType, error) {
 	case Operation_DELETE:
 		return backend.OpDelete, nil
 	default:
-		return -1, trace.BadParameter("unsupported operation type: %v", in)
+		return backend.OpInvalid, trace.BadParameter("unsupported operation type: %v", in)
 	}
 }
