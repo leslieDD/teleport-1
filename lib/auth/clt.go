@@ -1057,7 +1057,7 @@ func (c *Client) UpsertUser(user services.User) error {
 	return trace.Wrap(err)
 }
 
-// GetUser returns a list of usernames registered in the system
+// GetUser returns a user with the given name.
 func (c *Client) GetUser(name string, withSecrets bool) (services.User, error) {
 	if name == "" {
 		return nil, trace.BadParameter("missing username")
