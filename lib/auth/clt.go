@@ -829,12 +829,7 @@ func (c *Client) NewWatcher(ctx context.Context, watch services.Watch) (services
 	cancelCtx, cancel := context.WithCancel(ctx)
 	var protoWatch proto.Watch
 	for _, kind := range watch.Kinds {
-		protoWatch.Kinds = append(protoWatch.Kinds, proto.WatchKind{
-			Name:        kind.Name,
-			Kind:        kind.Kind,
-			LoadSecrets: kind.LoadSecrets,
-			Filter:      kind.Filter,
-		})
+		protoWatch.Kinds = append(protoWatch.Kinds, proto.WatchKindToProto(kind))
 	}
 	stream, err := clt.WatchEvents(cancelCtx, &protoWatch)
 	if err != nil {
@@ -1511,7 +1506,7 @@ func (c *Client) WebSessions() services.WebSessionInterface {
 }
 
 // GetWebSession returns the web session for the specified request.
-// Implements ReadAccessPoint
+// Implements ReadAccessPoint.
 func (c *Client) GetWebSession(ctx context.Context, req services.GetWebSessionRequest) (services.WebSession, error) {
 	return c.WebSessions().Get(ctx, req)
 }
