@@ -1189,11 +1189,17 @@ func eventToGRPC(in services.Event) (*proto.Event, error) {
 			AccessRequest: r,
 		}
 	case *services.WebSessionV2:
-		if r.GetSubKind() != services.KindAppSession {
-			return nil, trace.BadParameter("only %v supported", services.KindAppSession)
-		}
-		out.Resource = &proto.Event_AppSession{
-			AppSession: r,
+		switch r.GetSubKind() {
+		case services.KindAppSession:
+			out.Resource = &proto.Event_AppSession{
+				AppSession: r,
+			}
+		case services.KindWebSession:
+			out.Resource = &proto.Event_WebSession{
+				WebSession: r,
+			}
+		default:
+			return nil, trace.BadParameter("only %q supported", services.WebSessionSubKinds)
 		}
 	case *services.RemoteClusterV3:
 		out.Resource = &proto.Event_RemoteCluster{
@@ -1269,6 +1275,9 @@ func eventFromGRPC(in proto.Event) (*services.Event, error) {
 		out.Resource = r
 		return &out, nil
 	} else if r := in.GetAppSession(); r != nil {
+		out.Resource = r
+		return &out, nil
+	} else if r := in.GetWebSession(); r != nil {
 		out.Resource = r
 		return &out, nil
 	} else if r := in.GetRemoteCluster(); r != nil {
