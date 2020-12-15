@@ -264,80 +264,6 @@ const (
 	Deny RoleConditionType = false
 )
 
-// RoleConditionType specifies if it's an allow rule (true) or deny rule (false).
-type RoleConditionType bool
-
-// Role contains a set of permissions or settings
-type Role interface {
-	// Resource provides common resource methods.
-	Resource
-	// CheckAndSetDefaults checks and set default values for any missing fields.
-	CheckAndSetDefaults() error
-	// Equals returns true if the roles are equal. Roles are equal if options and
-	// conditions match.
-	Equals(other Role) bool
-	// ApplyTraits applies the passed in traits to any variables within the role
-	// and returns itself.
-	ApplyTraits(map[string][]string) Role
-
-	// GetOptions gets role options.
-	GetOptions() RoleOptions
-	// SetOptions sets role options
-	SetOptions(opt RoleOptions)
-
-	// GetLogins gets *nix system logins for allow or deny condition.
-	GetLogins(RoleConditionType) []string
-	// SetLogins sets *nix system logins for allow or deny condition.
-	SetLogins(RoleConditionType, []string)
-
-	// GetNamespaces gets a list of namespaces this role is allowed or denied access to.
-	GetNamespaces(RoleConditionType) []string
-	// GetNamespaces sets a list of namespaces this role is allowed or denied access to.
-	SetNamespaces(RoleConditionType, []string)
-
-	// GetNodeLabels gets the map of node labels this role is allowed or denied access to.
-	GetNodeLabels(RoleConditionType) Labels
-	// SetNodeLabels sets the map of node labels this role is allowed or denied access to.
-	SetNodeLabels(RoleConditionType, Labels)
-
-	// GetAppLabels gets the map of app labels this role is allowed or denied access to.
-	GetAppLabels(RoleConditionType) Labels
-	// SetAppLabels sets the map of app labels this role is allowed or denied access to.
-	SetAppLabels(RoleConditionType, Labels)
-
-	// GetClusterLabels gets the map of cluster labels this role is allowed or denied access to.
-	GetClusterLabels(RoleConditionType) Labels
-	// SetClusterLabels sets the map of cluster labels this role is allowed or denied access to.
-	SetClusterLabels(RoleConditionType, Labels)
-
-	// GetKubernetesLabels gets the map of kubernetes labels this role is
-	// allowed or denied access to.
-	GetKubernetesLabels(RoleConditionType) Labels
-	// SetKubernetesLabels sets the map of kubernetes labels this role is
-	// allowed or denied access to.
-	SetKubernetesLabels(RoleConditionType, Labels)
-
-	// GetRules gets all allow or deny rules.
-	GetRules(rct RoleConditionType) []Rule
-	// SetRules sets an allow or deny rule.
-	SetRules(rct RoleConditionType, rules []Rule)
-
-	// GetKubeGroups returns kubernetes groups
-	GetKubeGroups(RoleConditionType) []string
-	// SetKubeGroups sets kubernetes groups for allow or deny condition.
-	SetKubeGroups(RoleConditionType, []string)
-
-	// GetKubeUsers returns kubernetes users to impersonate
-	GetKubeUsers(RoleConditionType) []string
-	// SetKubeUsers sets kubernetes users to impersonate for allow or deny condition.
-	SetKubeUsers(RoleConditionType, []string)
-
-	// GetAccessRequestConditions gets allow/deny conditions for access requests.
-	GetAccessRequestConditions(RoleConditionType) AccessRequestConditions
-	// SetAccessRequestConditions sets allow/deny conditions for access requests.
-	SetAccessRequestConditions(RoleConditionType, AccessRequestConditions)
-}
-
 // ApplyTraits applies the passed in traits to any variables within the role
 // and returns itself.
 func ApplyTraits(r Role, traits map[string][]string) Role {
@@ -482,36 +408,6 @@ func applyValueTraits(val string, traits map[string][]string) ([]string, error) 
 		return nil, trace.Wrap(err)
 	}
 	return interpolated, nil
-}
-
-// GetVersion returns resource version
-func (r *RoleV3) GetVersion() string {
-	return r.Version
-}
-
-// GetKind returns resource kind
-func (r *RoleV3) GetKind() string {
-	return r.Kind
-}
-
-// GetSubKind returns resource sub kind
-func (r *RoleV3) GetSubKind() string {
-	return r.SubKind
-}
-
-// SetSubKind sets resource subkind
-func (r *RoleV3) SetSubKind(s string) {
-	r.SubKind = s
-}
-
-// GetResourceID returns resource ID
-func (r *RoleV3) GetResourceID() int64 {
-	return r.Metadata.ID
-}
-
-// SetResourceID sets resource ID
-func (r *RoleV3) SetResourceID(id int64) {
-	r.Metadata.ID = id
 }
 
 // Equals returns true if the roles are equal. Roles are equal if options,
@@ -2094,16 +1990,6 @@ func ProcessNamespace(namespace string) string {
 	return namespace
 }
 
-// MaxDuration returns maximum duration that is possible
-func MaxDuration() Duration {
-	return NewDuration(1<<63 - 1)
-}
-
-// NewDuration returns Duration struct based on time.Duration
-func NewDuration(d time.Duration) Duration {
-	return Duration(d)
-}
-
 // NewBool returns Bool struct based on bool value
 func NewBool(b bool) Bool {
 	return Bool(b)
@@ -2333,68 +2219,6 @@ func (b *BoolOption) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	b.Value = val.Value()
-	return nil
-}
-
-// Duration is a wrapper around duration to set up custom marshal/unmarshal
-type Duration time.Duration
-
-// Duration returns time.Duration from Duration typex
-func (d Duration) Duration() time.Duration {
-	return time.Duration(d)
-}
-
-// MarshalJSON marshals Duration to string
-func (d Duration) MarshalJSON() ([]byte, error) {
-	return json.Marshal(fmt.Sprintf("%v", d.Duration()))
-}
-
-// Value returns time.Duration value of this wrapper
-func (d Duration) Value() time.Duration {
-	return time.Duration(d)
-}
-
-// UnmarshalJSON marshals Duration to string
-func (d *Duration) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 {
-		return nil
-	}
-	var stringVar string
-	if err := json.Unmarshal(data, &stringVar); err != nil {
-		return trace.Wrap(err)
-	}
-	if stringVar == teleport.DurationNever {
-		*d = Duration(0)
-	} else {
-		out, err := time.ParseDuration(stringVar)
-		if err != nil {
-			return trace.BadParameter(err.Error())
-		}
-		*d = Duration(out)
-	}
-	return nil
-}
-
-// MarshalYAML marshals duration into YAML value,
-// encodes it as a string in format "1m"
-func (d Duration) MarshalYAML() (interface{}, error) {
-	return fmt.Sprintf("%v", d.Duration()), nil
-}
-
-func (d *Duration) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var stringVar string
-	if err := unmarshal(&stringVar); err != nil {
-		return trace.Wrap(err)
-	}
-	if stringVar == teleport.DurationNever {
-		*d = Duration(0)
-	} else {
-		out, err := time.ParseDuration(stringVar)
-		if err != nil {
-			return trace.BadParameter(err.Error())
-		}
-		*d = Duration(out)
-	}
 	return nil
 }
 
