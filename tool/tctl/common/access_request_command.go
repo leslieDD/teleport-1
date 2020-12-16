@@ -55,6 +55,7 @@ type AccessRequestCommand struct {
 	requestDeny    *kingpin.CmdClause
 	requestCreate  *kingpin.CmdClause
 	requestDelete  *kingpin.CmdClause
+	requestCaps    *kingpin.CmdClause
 }
 
 // Initialize allows AccessRequestCommand to plug itself into the CLI parser
@@ -86,6 +87,9 @@ func (c *AccessRequestCommand) Initialize(app *kingpin.Application, config *serv
 
 	c.requestDelete = requests.Command("rm", "Delete an access request")
 	c.requestDelete.Arg("request-id", "ID of target request(s)").Required().StringVar(&c.reqIDs)
+
+	c.requestCaps = requests.Command("capabilities", "Check a user's access capabilites").Alias("caps").Hidden()
+	c.requestCaps.Arg("username", "Name of target user").Required().StringVar(&c.user)
 }
 
 // TryRun takes the CLI command as an argument (like "access-request list") and executes it.
@@ -101,6 +105,8 @@ func (c *AccessRequestCommand) TryRun(cmd string, client auth.ClientI) (match bo
 		err = c.Create(client)
 	case c.requestDelete.FullCommand():
 		err = c.Delete(client)
+	case c.requestCaps.FullCommand():
+		err = c.Caps(client)
 	default:
 		return false, nil
 	}
@@ -225,6 +231,18 @@ func (c *AccessRequestCommand) Delete(client auth.ClientI) error {
 			return trace.Wrap(err)
 		}
 	}
+	return nil
+}
+
+func (c *AccessRequestCommand) Caps(client auth.ClientI) error {
+	caps, err := client.GetAccessCapabilities(context.TODO(), services.AccessCapabilitiesRequest{
+		User:             c.user,
+		RequestableRoles: true,
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	fmt.Printf("Requestable Roles: %+v\n", caps.RequestableRoles)
 	return nil
 }
 

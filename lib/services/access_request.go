@@ -231,6 +231,14 @@ type DynamicAccess interface {
 	UpdatePluginData(ctx context.Context, params PluginDataUpdateParams) error
 }
 
+// DynamicAccessOracle is a service capable of answering questions related
+// to the dynamic access API.  Necessary because some information (e.g. the
+// list of roles a user is allowed to request) can not be calculated by
+// actors with limited privileges.
+type DynamicAccessOracle interface {
+	GetAccessCapabilities(ctx context.Context, req AccessCapabilitiesRequest) (AccessCapabilities, error)
+}
+
 // DynamicAccessExt is an extended dynamic access interface
 // used to implement some auth server internals.
 type DynamicAccessExt interface {
