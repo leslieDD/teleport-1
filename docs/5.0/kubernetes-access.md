@@ -74,8 +74,6 @@ $ gcloud dns record-sets transaction describe --zone="$MYZONE"
 $ gcloud dns record-sets transaction execute --zone="$MYZONE"
 ```
 
-
-
 ```bash
 curl -s https://tele.logicoma.dev/webapi/ping | jq 
 {
@@ -101,13 +99,46 @@ curl -s https://tele.logicoma.dev/webapi/ping | jq
 
 Install https://goteleport.com/teleport/download/
 
-```
-https://get.gravitational.com/teleport-v{{ teleport.version }}-linux-amd64-bin.tar.gz
+```bash
+$ POD=$(kubectl get po -l app=teleport-cluster -o jsonpath='{.items[0].metadata.name}')
+$ kubectl exec -ti $POD tctl status
+
+Cluster  tele.logicoma.dev
+Version  5.0.0-dev
+Host CA  never updated
+User CA  never updated
+Jwt CA   never updated
+CA pin   sha256:e44c22e6e45fdc70e195ee1e34a493ba6ad440a2778e8d62b576292afe40eff9
 ```
 
+```bash
+$ kubectl exec -ti $POD tctl -- users add sasha --k8s-groups="system:masters"
+User "sasha" has been created but requires a password. Share this URL with the user to complete user setup, link is valid for 1h:
+https://tele.logicoma.dev:443/web/invite/e5de15a76cbc66c3bfbfe858542681fc
 
+NOTE: Make sure tele.logicoma.dev:443 points at a Teleport proxy which users can access.
+```
+
+```bash
+$ curl -L -O https://get.gravitational.com/teleport-v{{ teleport.version }}-linux-amd64-bin.tar.gz
+$ tar -xzf teleport-v{{ teleport.version }}-linux-amd64-bin.tar.gz
+$ sudo mv teleport/tsh /usr/local/bin/tsh
+$ sudo mv teleport/tctl /usr/local/bin/tctl
 
 ```
+
+```bash
+$ tsh kube ls
+
+Kube Cluster Name Selected
+----------------- --------
+tele.logicoma.dev *
+
+$ tsh kube login tele.logicoma.dev
+```
+
+Success!
+
 ### SSO for Kubernetes (step 1 out of 5)
 
 ### 3/5 Configure audits and sessions backends  (step 1 out of 5)
