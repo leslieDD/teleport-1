@@ -365,13 +365,13 @@ message CreateAppSessionResponse {
 // DeleteAppSessionRequest contains the parameters used to remove an application web session.
 message DeleteAppSessionRequest { string SessionID = 1 [ (gogoproto.jsontag) = "session_id" ]; }
 
-// GetKubeServicesRequest are the parameters used to request kubernetes types.
+// GetKubeServicesRequest are the parameters used to request kubernetes services.
 message GetKubeServicesRequest {}
 
-// GetKubeServicesResponse contains all requested kubernetes types.
+// GetKubeServicesResponse contains all requested kubernetes services.
 message GetKubeServicesResponse {
     // Servers is a slice of types.Server that represent kubernetes
-    // types.
+    // services.
     repeated types.ServerV2 Servers = 1 [ (gogoproto.jsontag) = "servers" ];
 }
 
@@ -385,7 +385,7 @@ message DeleteKubeServiceRequest {
     string Name = 2 [ (gogoproto.jsontag) = "name" ];
 }
 
-// DeleteAllKubeServicesRequest are the parameters used to remove all kubernetes types.
+// DeleteAllKubeServicesRequest are the parameters used to remove all kubernetes services.
 message DeleteAllKubeServicesRequest {}
 
 // AuthService is authentication/authorization service implementation
@@ -477,12 +477,12 @@ service AuthService {
     // UpdateRemoteCluster updates remote cluster
     rpc UpdateRemoteCluster(types.RemoteClusterV3) returns (google.protobuf.Empty);
 
-    // GetKubeServices gets all kubernetes types.
+    // GetKubeServices gets all kubernetes services.
     rpc GetKubeServices(GetKubeServicesRequest) returns (GetKubeServicesResponse);
     // UpsertKubeService adds or updates a kubernetes service.
     rpc UpsertKubeService(UpsertKubeServiceRequest) returns (google.protobuf.Empty);
     // DeleteKubeService removes a kubernetes service.
     rpc DeleteKubeService(DeleteKubeServiceRequest) returns (google.protobuf.Empty);
-    // DeleteAllKubeServices removes all kubernetes types.
+    // DeleteAllKubeServices removes all kubernetes services.
     rpc DeleteAllKubeServices(DeleteAllKubeServicesRequest) returns (google.protobuf.Empty);
 }
