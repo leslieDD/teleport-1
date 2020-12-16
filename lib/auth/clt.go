@@ -242,9 +242,10 @@ func NewTLSClient(cfg ClientConfig, params ...roundtrip.ClientParam) (*Client, e
 		return nil, trace.Wrap(err)
 	}
 	return &Client{
-		APIClient: apiClient,
-		Client:    *roundtripClient,
-		transport: transport,
+		ClientConfig: cfg,
+		APIClient:    apiClient,
+		Client:       *roundtripClient,
+		transport:    transport,
 	}, nil
 }
 
